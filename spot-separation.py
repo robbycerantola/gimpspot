@@ -84,8 +84,22 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
 def palette_callback(img,drawable):
     return
 
-
-def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=False,marks=False,multiple=False,delback=False,underlayer=False,enlargement=1,chla=0):
+def create_underlayer(img):
+    if debug:print "Underlayer drawable",img.layers[0]
+    dupe=img.duplicate()
+    undl=pdb.gimp_image_merge_visible_layers(dupe,1)
+    
+    
+    #pdb.gimp_display_new(dupe)
+    pdb.gimp_edit_copy(undl)
+    floating=pdb.gimp_edit_paste(img.layers[0],0)
+    pdb.gimp_edit_fill(floating,0)
+    pdb.gimp_layer_resize_to_image_size(floating)
+    pdb.gimp_floating_sel_to_layer(floating)
+    pdb.gimp_image_delete(dupe)
+    pdb.gimp_drawable_set_name(floating,"Underlayer")
+    
+def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=False,enlargement=1,chla=0):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
@@ -188,9 +202,12 @@ def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=Fals
             pass
         
         else:    # elaborate as layers
+            
             #delete old layer when finished
-            #pdb.gimp_layer_delete(original_active)
             timg.remove_layer(timg.layers[nrcol])
+            
+            #underlayer option
+            if underlayer: create_underlayer(timg)
             
             #for each layer draw crosshair
             if marks==True:
@@ -208,6 +225,8 @@ def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=Fals
                     pdb.gimp_paintbrush(curentlayer,0,2,[xpos,ypos,xpos,ypos],0,0)
                     pdb.gimp_paintbrush(curentlayer,0,2,[xpos+width-100,ypos,xpos+width-100,ypos],0,0)
                     
+                
+                 
                     #draw also some information
                 
                 for n in range(nrcol):
