@@ -23,6 +23,8 @@
 #Pixel enlargement factor: reduces resolution but not final printing dimension in mm  to get a bigger dot, 
 #usefull to get a better silkscreen. Usually a 2 factor is enought, bigger factor come with a bigger loose of details, 
 #important is also the starting resolution of the original image. 
+#
+#TODO Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
 
 import math
 from gimpfu import *
@@ -50,9 +52,24 @@ def export_layers(img, drw, path, flatten=False,nname=""):
         pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
         dupe.remove_layer(layer)
 
+def export_channels(img, drw, path, flatten=False,nname=""):
+    """Exports channels to separate monochrome tif files by colour name"""
+    dupe = img.duplicate()
+    for layer in dupe.layers:
+        layer.visible = 0
+    for layer in dupe.layers:
+        layer.visible = 1
+        name = nname+"_"+layer.name + ".tif"
+        fullpath = os.path.join(path, name);
+        tmp = dupe.duplicate()
+        if (flatten):  #in CorelDraw we need it Black/white to be coloured afterwards
+            tmp.flatten()
+            pdb.gimp_image_convert_rgb(tmp)
+            pdb.gimp_convert_indexed(tmp,0,3,2,0,0,"fake")
+        pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
+        dupe.remove_layer(layer)
 
-
-def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=False,marks=False,multiple=False,enlargement=1):
+def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=False,marks=False,multiple=False,underlayer=False,enlargement=1,chla=0):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
@@ -127,86 +144,97 @@ def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=Fals
             if debug:print timg.active_layer          
             pdb.gimp_by_color_select(nwdrawable,color,0,0,0,0,0,0)           
             
+            if chla==1: #create channels instead of layers (experimental)
+                if debug:print "Creating new Channel"
+                pdb.gimp_selection_invert(timg)
+                ch=pdb.gimp_selection_save(timg)
+                pdb.gimp_channel_set_opacity(ch,100)
+                pdb.gimp_drawable_set_name(ch,pdb.gimp_palette_entry_get_name(palette,idxcol))
             
-            pdb.gimp_edit_copy(nwdrawable)    #copy&paste way 1/2
-            floating=pdb.gimp_edit_paste(nwdrawable,0)       #2/2      
-            if multiple==True:
-                pdb.gimp_edit_fill(floating,0)  #fill the current selection with black 
-            pdb.gimp_layer_resize_to_image_size(floating) # resize curent layer to the image size
-            #floating=pdb.gimp_selection_float(nwdrawable,0,0)       #alternative way 1/1    
-            pdb.gimp_floating_sel_to_layer(floating)
+            else:    # create layers instead of channels
+                pdb.gimp_edit_copy(nwdrawable)    #copy&paste way 1/2
+                floating=pdb.gimp_edit_paste(nwdrawable,0)       #2/2      
+                if multiple==True:
+                    pdb.gimp_edit_fill(floating,0)  #fill the current selection with black 
+                pdb.gimp_layer_resize_to_image_size(floating) # resize curent layer to the image size
+                #floating=pdb.gimp_selection_float(nwdrawable,0,0)       #alternative way 1/1    
+                pdb.gimp_floating_sel_to_layer(floating)
             
-            #set layer name accordingly the palette colour name (or index)
-            layernewname=pdb.gimp_palette_entry_get_name(palette,idxcol)
-            if layernewname =="Immagine" or layernewname=="Untitled" :
-                layernewname="Col #"+str(idxcol)
-            floating.name=layernewname      
+                #set layer name accordingly the palette colour name (or index)
+                layernewname=pdb.gimp_palette_entry_get_name(palette,idxcol)
+                if layernewname =="Immagine" or layernewname=="Untitled" :
+                    layernewname="Col #"+str(idxcol)
+                floating.name=layernewname      
                        
             
-            
-        #delete old layer when finished
-        #pdb.gimp_layer_delete(original_active)
-        timg.remove_layer(timg.layers[nrcol])
         
-        #for each layer draw crosshair
-        if marks==True:
-            color=pdb.gimp_palette_entry_get_color(palette,0)	
-		
-            pdb.gimp_context_set_foreground(color)	
-            pdb.gimp_context_set_brush("CrossHair")
-            xpos=50
+        if chla==1: # elaborate as channels 
+            pass
+        
+        else:    # elaborate as layers
+            #delete old layer when finished
+            #pdb.gimp_layer_delete(original_active)
+            timg.remove_layer(timg.layers[nrcol])
             
-            for curentlayer in timg.layers:
-                #timg.active_layer=curentlayer
-                #draw crosshair
+            #for each layer draw crosshair
+            if marks==True:
+                color=pdb.gimp_palette_entry_get_color(palette,0)	
+    		
+                pdb.gimp_context_set_foreground(color)	
+                pdb.gimp_context_set_brush("CrossHair")
+                xpos=50
                 
-                
-                pdb.gimp_paintbrush(curentlayer,0,2,[xpos,ypos,xpos,ypos],0,0)
-                pdb.gimp_paintbrush(curentlayer,0,2,[xpos+width-100,ypos,xpos+width-100,ypos],0,0)
-                
-                #draw also some information
-            
-            for n in range(nrcol):
-                if debug:print"Info", n
-                info=timg.name+" "+timg.layers[n].name+" dot X"+str(enlargement)+" " +str(pdb.gimp_image_get_resolution(timg))+" ppi" 
-                
-                fl=pdb.gimp_text_fontname(timg,timg.layers[n],xpos+100,ypos+50,info,-1,False,20,0,"Sans") 
-                               
-                pdb.gimp_floating_sel_to_layer(fl)
-                
+                for curentlayer in timg.layers:
+                    #timg.active_layer=curentlayer
+                    #draw crosshair
                     
-                for k in range(n):
-                    pdb.gimp_image_lower_layer(timg,fl)
-                                        
-                pdb.gimp_image_merge_down(timg,fl,0) #merge layers
-            
-            
-            
-            
-            
-        name,ext =os.path.splitext(timg.name)        
-        #save multiple black&white files to be separately printed with printer or ripper
-        if multiple==True: 
-	        path=os.getcwd()
-	        export_layers(timg,nwdrawable,path,True,name)
-	        
-	        #TODO close current file without saving
-	        
-	        #TODO open every file
-	        
-	    #save one unic multicolor/multilayer file to be worked with CorelDraw for exemple     
-        else:    
-	        #back to RGB space because I cannot manage to make PSD indexed file
-	        # to keep trace of layers (maybe it is not possible)!!
-	        
-	        pdb.gimp_image_convert_rgb(timg)
-	        
-	        
-	        filename="separated-"+name+".psd"
-	       
-	        fullpath=os.path.join(os.getcwd(),filename)
-	        if debug:print"Saving ",fullpath            
-	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
+                    
+                    pdb.gimp_paintbrush(curentlayer,0,2,[xpos,ypos,xpos,ypos],0,0)
+                    pdb.gimp_paintbrush(curentlayer,0,2,[xpos+width-100,ypos,xpos+width-100,ypos],0,0)
+                    
+                    #draw also some information
+                
+                for n in range(nrcol):
+                    if debug:print"Info", n
+                    info=timg.name+" "+timg.layers[n].name+" dot X"+str(enlargement)+" " +str(pdb.gimp_image_get_resolution(timg))+" ppi" 
+                    
+                    fl=pdb.gimp_text_fontname(timg,timg.layers[n],xpos+100,ypos+50,info,-1,False,20,0,"Sans") 
+                                   
+                    pdb.gimp_floating_sel_to_layer(fl)
+                    
+                        
+                    for k in range(n):
+                        pdb.gimp_image_lower_layer(timg,fl)
+                                            
+                    pdb.gimp_image_merge_down(timg,fl,0) #merge layers
+                
+                
+                
+                
+                
+            name,ext =os.path.splitext(timg.name)        
+            #save multiple black&white files to be separately printed with printer or ripper
+            if multiple==True: 
+    	        path=os.getcwd()
+    	        export_layers(timg,nwdrawable,path,True,name)
+    	        
+    	        #TODO close current file without saving
+    	        
+    	        #TODO open every file
+    	        
+    	    #save one unic multicolor/multilayer file to be worked with CorelDraw for exemple     
+            else:    
+    	        #back to RGB space because I cannot manage to make PSD indexed file
+    	        # to keep trace of layers (maybe it is not possible)!!
+    	        
+    	        pdb.gimp_image_convert_rgb(timg)
+    	        
+    	        
+    	        filename="separated-"+name+".psd"
+    	       
+    	        fullpath=os.path.join(os.getcwd(),filename)
+    	        if debug:print"Saving ",fullpath            
+    	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
 	        
 	        
     else:
@@ -235,7 +263,12 @@ register(
                 (PF_BOOL,   "transparency", "Dither _Transparency:", False),
                 (PF_BOOL,   "marks", "_Marks & bars:", False),
                 (PF_BOOL,   "multiple", "Multiple files:", False),
-                (PF_INT,   "enlargement","Pixel enlargement factor",1)
+                (PF_BOOL,   "underlayer", "Automatic underlayer:",False),
+                (PF_INT,   "enlargement","Pixel enlargement factor",1),
+                (PF_RADIO, "chla","Selection with ",0,
+                (("Layers",0),
+                ("Channels(experimental)",1)))
+                
                 
                 
         ],
