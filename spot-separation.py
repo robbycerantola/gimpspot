@@ -25,6 +25,8 @@
 #important is also the starting resolution of the original image. 
 #
 #TODO Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
+#TODO Automate palette 
+#TODO Delete background from final layers
 
 import math
 from gimpfu import *
@@ -69,7 +71,21 @@ def export_channels(img, drw, path, flatten=False,nname=""):
         pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
         dupe.remove_layer(layer)
 
-def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=False,marks=False,multiple=False,underlayer=False,enlargement=1,chla=0):
+def spot_palette(timg,tdrawable,mode=0,option=False):
+    """Prepare palette for spot separation"""
+    palette=timg.name
+    palette,ext=os.path.splitext(palette)
+    palette=pdb.gimp_palette_new(palette)
+    if debug:print"Created new palette:%s" % palette
+    pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
+    pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
+    pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
+    
+def palette_callback(img,drawable):
+    return
+
+
+def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=False,marks=False,multiple=False,delback=False,underlayer=False,enlargement=1,chla=0):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
@@ -243,6 +259,34 @@ def spot_separation(timg, tdrawable,palette="Default",dither=2,transparency=Fals
     #timg.enable_undo()
     #pdb.gimp_image_undo_enable(timg)
     #pdb.gimp_image_undo_thaw(timg)
+
+register(
+        "Prepare-palette",
+        "Prepare custom palette for spot colour separation. Palette name will be the same as image name.",
+        "You have to make a custom palette where the first colours have to be black and white, then pick the background colour, then the other you need",
+        "Robby Cerantola",
+        "Robby Cerantola",
+        "2010-2011",
+        "<Image>/Spot/_Prepare palette...",
+        "RGB*, GRAY*",
+        [
+                
+                (PF_RADIO,"mode","Mode:",0,
+                (("Manual",0),
+                ("Mode 1",1),
+                ("Mode 2",2),
+                ("Mode 3",3))),
+                (PF_BOOL,   "option", "Option 1", False),
+                
+                
+                
+                
+        ],
+        [],
+        spot_palette)       
+
+
+
     
 register(
         "Spot-separation",
@@ -251,7 +295,7 @@ register(
         "Robby Cerantola",
         "Robby Cerantola",
         "2010-2011",
-        "<Image>/MyScripts/_Spot-Separation...",
+        "<Image>/Spot/_Spot-Separation...",
         "RGB*, GRAY*",
         [
                 (PF_PALETTE, "palette", "Palette name:", "Default"),
@@ -263,6 +307,7 @@ register(
                 (PF_BOOL,   "transparency", "Dither _Transparency:", False),
                 (PF_BOOL,   "marks", "_Marks & bars:", False),
                 (PF_BOOL,   "multiple", "Multiple files:", False),
+                (PF_BOOL,   "delback","Delete background color:",False),
                 (PF_BOOL,   "underlayer", "Automatic underlayer:",False),
                 (PF_INT,   "enlargement","Pixel enlargement factor",1),
                 (PF_RADIO, "chla","Selection with ",0,
@@ -274,6 +319,26 @@ register(
         ],
         [],
         spot_separation)
+        
+register(
+        "Palette_callback",
+        "Do nothing after being selected a palette",
+        "Return from external routine:do nothing",
+        "Robby Cerantola",
+        "Robby Cerantola",
+        "2010-2011",
+        "",
+        "RGB*, GRAY*",
+        [
+                
+                
+                
+                
+        ],
+        [],
+        palette_callback)    
+        
+        
 
 main()
 
