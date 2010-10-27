@@ -2,15 +2,15 @@
 #This is a Gimp plug-in for makeing spot color separation (suitable for screen printing)
 #starting from a photo in sRGB format.
 #It will reduce first the numbers of the colors accordingly to the custom palette prepared first by the user.
-#The color palette has to have the indexed color 0 -> black  color 1 ->white color 2 -> the eventually background
-# colour present in the original foto (if it is different from black or white) and than all the colours you think 
+#The color palette has to have the indexed color 0 -> black  color 1 ->white 
+# and than all the colours you think 
 #you need to make a good aproximation of the original photo
 #
-#spot-sparation.py V0.1 by Robby Cerantola for Seritex Arad Romania (c)2010-2011
+#spot-sparation.py V0.2 by Robby Cerantola for Seritex Arad Romania (c)2010-2011
 # robbycerantola@gmail.com
 #This is a GNU GPL open source software.
 #
-# Maximum number of colours -> 10 
+# Maximum number of colours = 10 
 # OPTIONS description:
 #
 #Marks & Bars: put registration marks, color squares to better identify every colour  on the bottom of the separated
@@ -24,9 +24,9 @@
 #usefull to get a better silkscreen. Usually a 2 factor is enought, bigger factor come with a bigger loose of details, 
 #important is also the starting resolution of the original image. 
 #
-#TODO Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
-#TODO Automate palette 
-#TODO Delete background from final layers
+#Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
+#TODO Automate palette creation
+#Automate background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
 
 import math
 from gimpfu import *
@@ -49,7 +49,7 @@ def export_layers(img, drw, path, flatten=False,nname=""):
         tmp = dupe.duplicate()
         if (flatten):  #in CorelDraw we need it Black/white to be coloured afterwards
             tmp.flatten()
-            pdb.gimp_image_convert_rgb(tmp)
+            ##pdb.gimp_image_convert_rgb(tmp)
             pdb.gimp_convert_indexed(tmp,0,3,2,0,0,"fake")
         pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
         dupe.remove_layer(layer)
@@ -57,19 +57,7 @@ def export_layers(img, drw, path, flatten=False,nname=""):
 def export_channels(img, drw, path, flatten=False,nname=""):
     """Exports channels to separate monochrome tif files by colour name"""
     dupe = img.duplicate()
-    for layer in dupe.layers:
-        layer.visible = 0
-    for layer in dupe.layers:
-        layer.visible = 1
-        name = nname+"_"+layer.name + ".tif"
-        fullpath = os.path.join(path, name);
-        tmp = dupe.duplicate()
-        if (flatten):  #in CorelDraw we need it Black/white to be coloured afterwards
-            tmp.flatten()
-            pdb.gimp_image_convert_rgb(tmp)
-            pdb.gimp_convert_indexed(tmp,0,3,2,0,0,"fake")
-        pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
-        dupe.remove_layer(layer)
+    pass
 
 def spot_palette(timg,tdrawable,mode=0,option=False):
     """Prepare palette for spot separation"""
@@ -86,11 +74,12 @@ def palette_callback(img,drawable):
 
 def create_underlayer(img):
     if debug:print "Underlayer drawable",img.layers[0]
+    gimp.progress_init("Creating underlayer")
+    gimp.progress_update(0.5)
+    
     dupe=img.duplicate()
     undl=pdb.gimp_image_merge_visible_layers(dupe,1)
-    
-    
-    #pdb.gimp_display_new(dupe)
+       
     pdb.gimp_edit_copy(undl)
     floating=pdb.gimp_edit_paste(img.layers[0],0)
     pdb.gimp_edit_fill(floating,0)
@@ -98,6 +87,7 @@ def create_underlayer(img):
     pdb.gimp_floating_sel_to_layer(floating)
     pdb.gimp_image_delete(dupe)
     pdb.gimp_drawable_set_name(floating,"Underlayer")
+    gimp.progress_update(1)
     
 def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=False,enlargement=1,chla=0):
     """ spot color separation """
@@ -110,6 +100,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     width = tdrawable.width
     height = tdrawable.height
     nrcol=pdb.gimp_palette_get_info(palette)
+    pixelcount=[]
     if enlargement>maxenlarge :
         enlargement=maxenlarge
     if enlargement>1:    #makes a "bigger" pixel
@@ -139,6 +130,10 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
 
     if nrcol < maxnumcol: 	
         gimp.progress_init("Separating...")
+        
+        
+        
+            
         pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)		
         
         #pdb.gimp_context_set_brush("Circle (19)")
@@ -174,6 +169,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             if debug:print timg.active_layer          
             pdb.gimp_by_color_select(nwdrawable,color,0,0,0,0,0,0)           
             
+            
+            
+            
             if chla==1: #create channels instead of layers (experimental)
                 if debug:print "Creating new Channel"
                 pdb.gimp_selection_invert(timg)
@@ -206,8 +204,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             #delete old layer when finished
             timg.remove_layer(timg.layers[nrcol])
             
-            #underlayer option
-            if underlayer: create_underlayer(timg)
+            
             
             #for each layer draw crosshair
             if marks==True:
@@ -245,36 +242,62 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 
                 
                 
-                
-                
+            pdb.gimp_image_convert_rgb(timg) #back to rgb because of gimp_histogram routine and CorelDraw issues  
+               
+            
+            #automatic background deletion
+            if delback:
+                gimp.progress_init("Deleting background...")
+                gimp.progress_update(0.5)
+                biggerlayer=None
+                oldpixelcount=0
+                for curent_layer in timg.layers:
+                    timg.active_layer=curent_layer
+	                
+	                #set layer pixel counter for current layer (color) needed for background deletion
+                    (a,b,c,pixelcount,e,f)=pdb.gimp_histogram(timg.active_layer,0,0,255) 
+                    if pixelcount>oldpixelcount:
+                        oldpixelcount=pixelcount
+                        biggerlayer=curent_layer
+
+                #delete found background
+                timg.remove_layer(biggerlayer)
+                gimp.progress_update(1)
+        
+            
+            #underlayer option
+            if underlayer: create_underlayer(timg)
+            
             name,ext =os.path.splitext(timg.name)        
+        
             #save multiple black&white files to be separately printed with printer or ripper
             if multiple==True: 
-    	        path=os.getcwd()
+    	        path=os.getcwd()   	        
+    	        
     	        export_layers(timg,nwdrawable,path,True,name)
     	        
+                pdb.gimp_message("Done, multiple files saved in "+path)
     	        #TODO close current file without saving
     	        
     	        #TODO open every file
     	        
     	    #save one unic multicolor/multilayer file to be worked with CorelDraw for exemple     
             else:    
-    	        #back to RGB space because I cannot manage to make PSD indexed file
-    	        # to keep trace of layers (maybe it is not possible)!!
-    	        
-    	        pdb.gimp_image_convert_rgb(timg)
-    	        
-    	        
+    	         	           	        
+    	           	           
+    	                
     	        filename="separated-"+name+".psd"
     	       
     	        fullpath=os.path.join(os.getcwd(),filename)
     	        if debug:print"Saving ",fullpath            
     	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
-	        
+                pdb.gimp_message("Done, file saved in "+fullpath)
 	        
     else:
 		if debug:print "Too many colors: can't deal with!!"
+		pdb.gimp_message("Too many colors: can't deal with it!!")
 		#error : too many colors to do spot separation with
+    
     #timg.enable_undo()
     #pdb.gimp_image_undo_enable(timg)
     #pdb.gimp_image_undo_thaw(timg)
