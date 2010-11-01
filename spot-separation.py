@@ -25,8 +25,13 @@
 #important is also the starting resolution of the original image. 
 #
 #Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
+#Automated background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
+
+#TODO shrink underlayer (fondino has to be a little smaller than the upper layers to be not visible at all!)
 #TODO Automate palette creation
-#Automate background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
+
+
+#01-11-2010 Corrected "block"bug and Crosshair for pixel enlargement >1  
 
 import math
 from gimpfu import *
@@ -101,6 +106,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     height = tdrawable.height
     nrcol=pdb.gimp_palette_get_info(palette)
     pixelcount=[]
+    nwdrawable=timg.flatten() # flatten all existing layers
     if enlargement>maxenlarge :
         enlargement=maxenlarge
     if enlargement>1:    #makes a "bigger" pixel
@@ -108,11 +114,11 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         width=int(width/enlargement)
         height=int(height/enlargement)
         pdb.gimp_image_set_resolution(timg,int(xres/enlargement),int(yres/enlargement))
-        tdrawable=pdb.gimp_drawable_transform_scale(tdrawable,0,0,width,height,0,0,0,3,0)
+        nwdrawable=pdb.gimp_drawable_transform_scale(nwdrawable,0,0,width,height,0,0,0,3,0)
     
 	#making room for palette and marks  
     
-    nwdrawable=timg.flatten() # flatten all existing layers
+    #nwdrawable=timg.flatten() # flatten all existing layers
     pdb.gimp_context_set_background(pdb.gimp_palette_entry_get_color(palette,2)) # background is the first color in the palette
     pdb.gimp_image_resize(timg,width,height+130,0,0)
     
@@ -211,7 +217,12 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 color=pdb.gimp_palette_entry_get_color(palette,0)	
     		
                 pdb.gimp_context_set_foreground(color)	
-                pdb.gimp_context_set_brush("CrossHair")
+                if enlargement>1 :
+                    pdb.gimp_context_set_brush("SmallCrossHair")
+                else:
+                    pdb.gimp_context_set_brush("CrossHair")    
+                    
+                #pdb.gimp_context_set_brush(cross)
                 xpos=50
                 
                 for curentlayer in timg.layers:
