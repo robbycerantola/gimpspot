@@ -73,7 +73,8 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
     if debug:print"Created new palette:%s" % palette
     pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
     pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
-    pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
+    pdb.gimp_message("New %s empty palette created. You have to fill it manually with the color picker tool !"% palette)
+    #pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
     
 def palette_callback(img,drawable):
     return
@@ -196,6 +197,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         
         #draw some squares coloured in palette colours
         if marks==True:
+            
             xpos=100
             ypos=height+50
             delta=int((width-200)/nrcol)
@@ -204,11 +206,12 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             for idxcol in range(1,nrcol):
                 xpos=xpos+delta
                 color=pdb.gimp_palette_entry_get_color(palette,idxcol)	
-		
+                if debug:print"Drawing coloured block ",color
                 pdb.gimp_context_set_foreground(color)	
             
                 pdb.gimp_paintbrush(nwdrawable,0,2,[xpos,ypos,xpos,ypos],0,0)
-                
+        
+        ##pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)	                
             
             
                 
@@ -221,7 +224,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             
             timg.active_layer = original_active
             color=pdb.gimp_palette_entry_get_color(palette,idxcol)
-            if debug:print timg.active_layer          
+                     
             pdb.gimp_by_color_select(nwdrawable,color,0,0,0,0,0,0)           
             
             
@@ -278,12 +281,12 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                     
                 #pdb.gimp_context_set_brush(cross)
                 xpos=50
-                
+                nrlayers=0
                 for curentlayer in timg.layers:
                     #timg.active_layer=curentlayer
                     #draw crosshair
                     
-                    
+                    nrlayers=nrlayers+1
                     pdb.gimp_paintbrush(curentlayer,0,2,[xpos,ypos,xpos,ypos],0,0)
                     pdb.gimp_paintbrush(curentlayer,0,2,[xpos+width-100,ypos,xpos+width-100,ypos],0,0)
                     
@@ -291,7 +294,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                  
                     #draw also some information
                 
-                for n in range(nrcol):
+                for n in range(nrlayers):
                     if debug:print"Info", n
                     info=timg.name+" "+timg.layers[n].name+" dot X"+str(enlargement)+" " +str(pdb.gimp_image_get_resolution(timg))+" ppi" 
                     
@@ -421,7 +424,7 @@ register(
                 (("None",0),
                 ("Same dimensions",1),
                 ("Bigger",2),
-                ("Smaller(not working properly yet!)",3))),
+                ("Smaller",3))),
                 (PF_INT,   "enlargement","Pixel enlargement factor",1),
                 (PF_RADIO, "chla","Selection with ",0,
                 (("Layers",0),
