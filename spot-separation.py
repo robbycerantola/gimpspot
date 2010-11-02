@@ -6,7 +6,7 @@
 # and than all the colours you think 
 #you need to make a good aproximation of the original photo
 #
-#spot-sparation.py V0.2 by Robby Cerantola for Seritex Arad Romania (c)2010-2011
+#spot-sparation.py V0.2.1 by Robby Cerantola for Seritex Arad Romania (c)2010-2011
 # robbycerantola@gmail.com
 #This is a GNU GPL open source software.
 #
@@ -27,11 +27,12 @@
 #Automatic underlayer: (fondino) Makes an extra underlayer for all the separated layers for screen printing a white base to be over printed. 
 #Automated background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
 
-#TODO shrink underlayer (fondino has to be a little smaller than the upper layers to be not visible at all!)
+#Done: 02-11-2010 shrink underlayer (fondino has to be a little smaller than the upper layers to be not visible at all!)
 #TODO Automate palette creation
+#TODO Alternative method using channels
+#TODO Clean up and speed up the code
 
-
-#01-11-2010 Corrected "block"bug and Crosshair for pixel enlargement >1  
+#Done: 01-11-2010 Corrected "block"bug and Crosshair for pixel enlargement >1  
 
 import math
 from gimpfu import *
@@ -77,14 +78,44 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
 def palette_callback(img,drawable):
     return
 
-def create_underlayer(img):
+def background_deletion(timg):
+    if debug:print"Deleting background"
+    gimp.progress_init("Deleting background...")
+    gimp.progress_update(0.5)
+    biggerlayer=None
+    oldpixelcount=0
+    for curent_layer in timg.layers:
+        timg.active_layer=curent_layer
+        
+        #set layer pixel counter for current layer (color) needed for background deletion
+        (a,b,c,pixelcount,e,f)=pdb.gimp_histogram(timg.active_layer,0,0,255) 
+        if pixelcount>oldpixelcount:
+            oldpixelcount=pixelcount
+            biggerlayer=curent_layer
+
+    #delete found background
+    timg.remove_layer(biggerlayer)
+    gimp.progress_update(1)
+
+
+def create_underlayer(img,underlayer,value=1,enlargement=1,marks=0):
     if debug:print "Underlayer drawable",img.layers[0]
     gimp.progress_init("Creating underlayer")
     gimp.progress_update(0.5)
     
     dupe=img.duplicate()
     undl=pdb.gimp_image_merge_visible_layers(dupe,1)
-       
+    
+
+    ## Added for correcting underlayer issues
+    #we have select the block zone and delete it!
+    pdb.gimp_rect_select(dupe,0,dupe.height-130,dupe.width,dupe.height,0,False,0)
+    #delete selection
+    pdb.gimp_edit_clear(undl)
+    #select all
+    pdb.gimp_selection_all(dupe)
+    ## end
+    
     pdb.gimp_edit_copy(undl)
     floating=pdb.gimp_edit_paste(img.layers[0],0)
     pdb.gimp_edit_fill(floating,0)
@@ -92,9 +123,27 @@ def create_underlayer(img):
     pdb.gimp_floating_sel_to_layer(floating)
     pdb.gimp_image_delete(dupe)
     pdb.gimp_drawable_set_name(floating,"Underlayer")
+    if underlayer == 2:
+        #Enlarge underlayer
+        pdb.gimp_selection_layer_alpha(floating)
+        pdb.gimp_selection_grow(img,value)
+        pdb.gimp_edit_fill(floating,0)
+    if underlayer == 3:
+        #Shrink underlayer   
+        pdb.gimp_selection_layer_alpha(floating)
+        pdb.gimp_edit_clear(floating)
+        pdb.gimp_selection_shrink(img,value)
+        pdb.gimp_edit_fill(floating,0)
+    
+    
+    
+    pdb.gimp_selection_none(img)    
+    
+    ##end
+    
     gimp.progress_update(1)
     
-def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=False,enlargement=1,chla=0):
+def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
@@ -106,7 +155,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     height = tdrawable.height
     nrcol=pdb.gimp_palette_get_info(palette)
     pixelcount=[]
-    nwdrawable=timg.flatten() # flatten all existing layers
+    nwdrawable=timg.flatten() # flatten all existing layers first !! (this solve also block bug)
     if enlargement>maxenlarge :
         enlargement=maxenlarge
     if enlargement>1:    #makes a "bigger" pixel
@@ -200,7 +249,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                     layernewname="Col #"+str(idxcol)
                 floating.name=layernewname      
                        
-            
+           
+        
         
         if chla==1: # elaborate as channels 
             pass
@@ -209,8 +259,12 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             
             #delete old layer when finished
             timg.remove_layer(timg.layers[nrcol])
+            #back to rgb for histogram to work
+            pdb.gimp_image_convert_rgb(timg)
+            if delback:background_deletion(timg)
             
-            
+            #make underlayer new position
+            if underlayer>0: create_underlayer(timg,underlayer,1,enlargement,marks)
             
             #for each layer draw crosshair
             if marks==True:
@@ -253,31 +307,32 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 
                 
                 
-            pdb.gimp_image_convert_rgb(timg) #back to rgb because of gimp_histogram routine and CorelDraw issues  
+             #back to rgb because of gimp_histogram routine and CorelDraw issues  
                
             
             #automatic background deletion
-            if delback:
-                gimp.progress_init("Deleting background...")
-                gimp.progress_update(0.5)
-                biggerlayer=None
-                oldpixelcount=0
-                for curent_layer in timg.layers:
-                    timg.active_layer=curent_layer
-	                
-	                #set layer pixel counter for current layer (color) needed for background deletion
-                    (a,b,c,pixelcount,e,f)=pdb.gimp_histogram(timg.active_layer,0,0,255) 
-                    if pixelcount>oldpixelcount:
-                        oldpixelcount=pixelcount
-                        biggerlayer=curent_layer
+            #if delback:
+            #    if debug:print"Deleting background"
+            #    gimp.progress_init("Deleting background...")
+            #    gimp.progress_update(0.5)
+            #    biggerlayer=None
+            #    oldpixelcount=0
+            #    for curent_layer in timg.layers:
+            #        timg.active_layer=curent_layer
+	        #        
+	        #        #set layer pixel counter for current layer (color) needed for background deletion
+            #        (a,b,c,pixelcount,e,f)=pdb.gimp_histogram(timg.active_layer,0,0,255) 
+            #        if pixelcount>oldpixelcount:
+            #            oldpixelcount=pixelcount
+            #            biggerlayer=curent_layer
 
-                #delete found background
-                timg.remove_layer(biggerlayer)
-                gimp.progress_update(1)
+            #    #delete found background
+            #    timg.remove_layer(biggerlayer)
+            #    gimp.progress_update(1)
         
             
             #underlayer option
-            if underlayer: create_underlayer(timg)
+            #if underlayer>0: create_underlayer(timg,underlayer,1,enlargement,marks)
             
             name,ext =os.path.splitext(timg.name)        
         
@@ -361,7 +416,12 @@ register(
                 (PF_BOOL,   "marks", "_Marks & bars:", False),
                 (PF_BOOL,   "multiple", "Multiple files:", False),
                 (PF_BOOL,   "delback","Delete background color:",False),
-                (PF_BOOL,   "underlayer", "Automatic underlayer:",False),
+                
+                (PF_RADIO,   "underlayer", "Automatic underlayer:",0,
+                (("None",0),
+                ("Same dimensions",1),
+                ("Bigger",2),
+                ("Smaller(not working properly yet!)",3))),
                 (PF_INT,   "enlargement","Pixel enlargement factor",1),
                 (PF_RADIO, "chla","Selection with ",0,
                 (("Layers",0),
