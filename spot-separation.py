@@ -6,11 +6,11 @@
 # and than all the colours you think 
 #you need to make a good aproximation of the original photo
 #
-#spot-sparation.py V0.2.1 by Robby Cerantola for Seritex Arad Romania (c)2010-2011
-# robbycerantola@gmail.com
-#This is a GNU GPL open source software.
+#spot-sparation.py V0.2.3   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
+
+#The program is distributed under the terms of the GNU General Public License.
 #
-# Maximum number of colours = 10 
+# Maximum number of colours = 14 
 # OPTIONS description:
 #
 #Marks & Bars: put registration marks, color squares to better identify every colour  on the bottom of the separated
@@ -31,6 +31,8 @@
 #TODO Automate palette creation
 #TODO Alternative method using channels
 #TODO Clean up and speed up the code
+#TODO undo
+#TODO preview
 
 #Done: 01-11-2010 Corrected "block"bug and Crosshair for pixel enlargement >1  
 
@@ -40,8 +42,8 @@ import os
 
 
 debug=1        #output some debug information on console
-maxnumcol=10   #max number of final colours
-maxenlarge=4   #max pixel factor enlargement
+maxnumcol=14   #max number of final colours
+maxenlarge=5   #max pixel enlargement factor
 
 def export_layers(img, drw, path, flatten=False,nname=""):
     """Exports layers to separate monochrome tif files by colour name"""
@@ -144,7 +146,7 @@ def create_underlayer(img,underlayer,value=1,enlargement=1,marks=0):
     
     gimp.progress_update(1)
     
-def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0):
+def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0,wdir=os.getcwd() ):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
@@ -168,7 +170,6 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     
 	#making room for palette and marks  
     
-    #nwdrawable=timg.flatten() # flatten all existing layers
     pdb.gimp_context_set_background(pdb.gimp_palette_entry_get_color(palette,2)) # background is the first color in the palette
     pdb.gimp_image_resize(timg,width,height+130,0,0)
     
@@ -341,8 +342,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         
             #save multiple black&white files to be separately printed with printer or ripper
             if multiple==True: 
-    	        path=os.getcwd()   	        
-    	        
+    	        #path=os.getcwd()   	        
+    	        path=wdir
     	        export_layers(timg,nwdrawable,path,True,name)
     	        
                 pdb.gimp_message("Done, multiple files saved in "+path)
@@ -357,7 +358,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     	                
     	        filename="separated-"+name+".psd"
     	       
-    	        fullpath=os.path.join(os.getcwd(),filename)
+    	        #fullpath=os.path.join(os.getcwd(),filename)
+    	        fullpath=os.path.join(wdir,filename)
     	        if debug:print"Saving ",fullpath            
     	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
                 pdb.gimp_message("Done, file saved in "+fullpath)
@@ -428,7 +430,8 @@ register(
                 (PF_INT,   "enlargement","Pixel enlargement factor",1),
                 (PF_RADIO, "chla","Selection with ",0,
                 (("Layers",0),
-                ("Channels(experimental)",1)))
+                ("Channels(experimental)",1))),
+                (PF_DIRNAME,"wdir","Working directory",0)
                 
                 
                 
