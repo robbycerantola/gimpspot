@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 #This is a Gimp plug-in for makeing spot color separation (suitable for screen printing)
 #starting from a photo in sRGB format.
-#It will reduce first the numbers of the colors accordingly to the custom palette prepared first by the user.
+#It will reduce first the numbers of the colors accordingly to the custom palette prepared by the user.
 #The color palette has to have the indexed color 0 -> black  color 1 ->white 
 # and than all the colours you think 
-#you need to make a good aproximation of the original photo
+#you need to make a good aproximation of the original photo/artwork
 #
 #spot-sparation.py V0.2.3   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
 
@@ -29,9 +29,9 @@
 
 #Done: 02-11-2010 shrink underlayer (fondino has to be a little smaller than the upper layers to be not visible at all!)
 #TODO Automate palette creation
-#TODO Alternative method using channels
+#TODO Alternative method using channels  (partially implemented)
 #TODO Clean up and speed up the code
-#TODO undo
+#Done: 07-11-2010 undo is functional but uses a lot of memory! (Is there a better way?)
 #TODO preview
 
 #Done: 01-11-2010 Corrected "block"bug and Crosshair for pixel enlargement >1  
@@ -44,9 +44,10 @@ import os
 debug=1        #output some debug information on console
 maxnumcol=14   #max number of final colours
 maxenlarge=5   #max pixel enlargement factor
+shrink=1       #nr of pixels for shrinking/growing underlayer
 
 def export_layers(img, drw, path, flatten=False,nname=""):
-    """Exports layers to separate monochrome tif files by colour name"""
+    """Exports layers into separate monochrome tif files identified by colour name"""
     dupe = img.duplicate()
     for layer in dupe.layers:
         layer.visible = 0
@@ -63,7 +64,7 @@ def export_layers(img, drw, path, flatten=False,nname=""):
         dupe.remove_layer(layer)
 
 def export_channels(img, drw, path, flatten=False,nname=""):
-    """Exports channels to separate monochrome tif files by colour name"""
+    """Exports channels into separate monochrome tif files identified by colour name"""
     dupe = img.duplicate()
     pass
 
@@ -75,6 +76,7 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
     if debug:print"Created new palette:%s" % palette
     pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
     pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
+    timg.flatten() # flatten the image so you can easily pick up the colours from image
     pdb.gimp_message("New %s empty palette created. You have to fill it manually with the color picker tool !"% palette)
     #pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
     
@@ -111,7 +113,7 @@ def create_underlayer(img,underlayer,value=1,enlargement=1,marks=0):
     
 
     ## Added for correcting underlayer issues
-    #we have select the block zone and delete it!
+    #we select the block zone and delete it!
     pdb.gimp_rect_select(dupe,0,dupe.height-130,dupe.width,dupe.height,0,False,0)
     #delete selection
     pdb.gimp_edit_clear(undl)
@@ -151,9 +153,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
         return 
-    #timg.disable_undo()
-    #pdb.gimp_image_undo_disable(timg)
-    #pdb.gimp_image_undo_freeze(timg)
+    
+    pdb.gimp_image_undo_group_start(timg)
+    
     width = tdrawable.width
     height = tdrawable.height
     nrcol=pdb.gimp_palette_get_info(palette)
@@ -237,7 +239,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 ch=pdb.gimp_selection_save(timg)
                 pdb.gimp_channel_set_opacity(ch,100)
                 pdb.gimp_drawable_set_name(ch,pdb.gimp_palette_entry_get_name(palette,idxcol))
-            
+                pdb.gimp_selection_none(timg)
+                
             else:    # create layers instead of channels
                 pdb.gimp_edit_copy(nwdrawable)    #copy&paste way 1/2
                 floating=pdb.gimp_edit_paste(nwdrawable,0)       #2/2      
@@ -257,6 +260,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         
         
         if chla==1: # elaborate as channels 
+            #TODO open channels docker
+            pdb.gimp_message("That's it with channels separation, for now.")
             pass
         
         else:    # elaborate as layers
@@ -268,7 +273,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             if delback:background_deletion(timg)
             
             #make underlayer new position
-            if underlayer>0: create_underlayer(timg,underlayer,1,enlargement,marks)
+            if underlayer>0: create_underlayer(timg,underlayer,shrink,enlargement,marks)
             
             #for each layer draw crosshair
             if marks==True:
@@ -365,14 +370,13 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 pdb.gimp_message("Done, file saved in "+fullpath)
 	        
     else:
-		if debug:print "Too many colors: can't deal with!!"
-		pdb.gimp_message("Too many colors: can't deal with it!!")
+		if debug:print "Too many colors or wrong palette!"
+		pdb.gimp_message("Too many colors or wrong palette!")
 		#error : too many colors to do spot separation with
     
-    #timg.enable_undo()
-    #pdb.gimp_image_undo_enable(timg)
-    #pdb.gimp_image_undo_thaw(timg)
-
+    
+    pdb.gimp_image_undo_group_end(timg)
+    
 register(
         "Prepare-palette",
         "Prepare custom palette for spot colour separation. Palette name will be the same as image name.",
