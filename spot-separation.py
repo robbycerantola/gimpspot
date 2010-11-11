@@ -1,31 +1,40 @@
 #!/usr/bin/env python
-#This is a Gimp plug-in for making spot color separation (suitable for screen printing)
-#starting from a photo in sRGB format.
-#It will reduce first the numbers of the colors accordingly to the custom palette prepared by the user.
-#The color palette has to have the indexed color 0 -> black  color 1 ->white 
+# This is a Gimp plug-in for making spot color separation (suitable for screen printing)
+# starting from a photo in sRGB format.
+# It will reduce first the numbers of the colors accordingly to the custom palette prepared by the user.
+# The color palette has to have the indexed color 0 -> black  color 1 ->white 
 # and than all the colours you think 
-#you need to make a good approximation of the original photo/artwork
+# you need to make a good approximation of the original photo/artwork.
 #
-#spot-separation.py V0.2.3   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
+# spot-separation.py V0.2.3   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
 
-#The program is distributed under the terms of the GNU General Public License.
+# The program is distributed under the terms of the GNU General Public License.
 #
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 # Maximum number of colours = 14 
 # OPTIONS description:
 #
-#Marks & Bars: put registration marks, color squares to better identify every colour  on the bottom of the separated
-#layers plus some text information about filename, colour name (accordingly with names stored in the current palette),
-#resolution pixel enlargement factor
-#Multiple files : save in the current directory as many black&white files as the colors in the final image,
-#useful to be imported in RIP software for printing or CorelDraw(TM);if not selected it will be saved only one multilayer
-#PSD file.  
+# Marks & Bars: put registration marks, color squares to better identify every colour  on the bottom of the separated
+# layers plus some text information about filename, colour name (accordingly with names stored in the current palette),
+# resolution pixel enlargement factor
+# Multiple files : save in the current directory as many black&white files as the colors in the final image,
+# useful to be imported in RIP software for printing or CorelDraw(TM);if not selected it will be saved only one multilayer
+# PSD file.  
 
-#Pixel enlargement factor: reduces resolution but not final printing dimension in mm  to get a bigger dot, 
-#useful to get a better silkscreen. Usually a 2 factor is enough, bigger factor come with a bigger loose of details, 
-#important is also the starting resolution of the original image. 
+# Pixel enlargement factor: reduces resolution but not final printing dimension in mm  to get a bigger dot, 
+# useful to get a better silkscreen. Usually a 2 factor is enough, bigger factor come with a bigger loose of details, 
+# important is also the starting resolution of the original image. 
 #
-#Automatic underlayer: (fondino) Makes an extra under-layer for all the separated layers for screen printing a white base to be over printed. 
-#Automated background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
+# Automatic underlayer: (fondino) Makes an extra under-layer for all the separated layers for screen printing a white base to be over printed. 
+# Automated background deletion from final layers (Count pixels by histogram and delete the layer with bigger pixel counter)
 
 #Done: 02-11-2010 shrink under-layer (fondino has to be a little smaller than the upper layers to be not visible at all!)
 #TODO Automate palette creation
@@ -68,9 +77,25 @@ def export_layers(img, drw, path, flatten=False,nname=""):
         dupe.remove_layer(layer)
 
 def export_channels(img, drw, path, flatten=False,nname=""):
-    """Exports channels into separate monochrome tif files identified by colour name"""
+    """Exports channels into separate monochrome png files identified by colour name"""
+	# original routine from  
+	# Author: Chris Mohler
+    # Copyright 2010 Chris Mohler
+    # modified by Robby Cerantola for saving EPS
     dupe = img.duplicate()
-    pass
+    for layer in dupe.layers:
+        layer.visible = 0
+        for channel in dupe.channels:
+                channel.visible = 0
+    for channel in dupe.channels:
+        channel.visible = 1
+        name = nname+"_"+channel.name + ".eps"
+        fullpath = os.path.join(path, name);
+        tmp = dupe.duplicate()
+        #pdb.file_png_save(tmp, tmp.channels[0], fullpath, name, 0, 9, 1, 1, 1, 1, 1)
+        pdb.gimp_file_save(tmp, tmp.channels[0], fullpath, name)
+        dupe.remove_channel(channel)
+    
 
 def spot_palette(timg,tdrawable,mode=0,option=False):
     """Prepare palette for spot separation"""
@@ -86,7 +111,7 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
     
 def compute(img,drawable,kind=0):
     """Tries to guess a suitable pixel enlargement factor"""
-    odd=[0.01,0.015,0.008,0.005] # optimal printing dot in inches for generic,waterbased,plastisol,transfer based on personal experience
+    odd=[0.01,0.015,0.008,0.005] # optimal printing dot dimension in inches for generic,waterbased,plastisol,transfer based on personal experience
     
     x=img.width
     y=img.height
@@ -94,7 +119,7 @@ def compute(img,drawable,kind=0):
     cdd=1.0/xres
     pef=int(odd[kind]/cdd)
     if pef<1 :pef=1
-    message="Image is %sx%s pixels \nresolution is %sx%s ppi\ncurrent pixel dimension=%sinches \nsuggested pixel enlargement factor=%s " % (x,y,xres,yres,cdd,pef)
+    message="Image is %sx%s pixels \nresolution is %sx%s ppi\ncurrent pixel dimension=%sinches \nsuggested pixel enlargement factor is %s " % (x,y,xres,yres,cdd,pef)
     if xres <100 : message=message+"\n \n Attention:resolution image seems to bee too poor for screen printing!!"
     pdb.gimp_message(message)
     return pef
@@ -282,8 +307,21 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         
         if chla==1: # elaborate as channels 
             #TODO open channels docker
-            pdb.gimp_message("That's it with channels separation, for now.")
-            pass
+            name,ext =os.path.splitext(timg.name) 
+            if multiple==True:
+                
+                export_channels(timg,nwdrawable,wdir,True,name)
+                pdb.gimp_message("Done, multiple files saved in directory %s" % wdir)
+            
+            else:
+                    	                
+    	        filename="separated-"+name+".psd"    	             
+    	        fullpath=os.path.join(wdir,filename)
+    	        if debug:print"Saving (channel mode)",fullpath            
+    	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
+                pdb.gimp_message("Done, file saved in "+fullpath)      
+                                
+            
         
         else:    # elaborate as layers
             
@@ -386,7 +424,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     	       
     	        #fullpath=os.path.join(os.getcwd(),filename)
     	        fullpath=os.path.join(wdir,filename)
-    	        if debug:print"Saving ",fullpath            
+    	        if debug:print"Saving (layer mode)",fullpath            
     	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
                 pdb.gimp_message("Done, file saved in "+fullpath)
 	        
@@ -400,7 +438,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     
 register(
         "Prepare-palette",
-        "Prepare custom palette for spot colour separation. Palette name will be the same as image name.",
+        "Prepare custom palette for spot colour separation.\nPalette name will be the same as image name.\n(Only manual mode is available for now)",
         "You have to make a custom palette where the first colours have to be black and white, then pick the background colour, then the other you need",
         "Robby Cerantola",
         "Robby Cerantola",
@@ -411,10 +449,11 @@ register(
                 
                 (PF_RADIO,"mode","Mode:",0,
                 (("Manual",0),
-                ("Mode 1",1),
-                ("Mode 2",2),
-                ("Mode 3",3))),
-                (PF_BOOL,   "option", "Option 1", False),
+                #("Mode 1",1),
+                #("Mode 2",2),
+                #("Mode 3",3)
+                )),
+                #(PF_BOOL,   "option", "Option 1", False),
                 
                 
                 
@@ -455,7 +494,7 @@ register(
                 (PF_INT,   "enlargement","Pixel enlargement fac_tor",1),
                 (PF_RADIO, "chla","Selection with ",0,
                 (("_Layers",0),
-                ("_Channels(experimental)",1))),
+                ("_Channels",1))),
                 (PF_DIRNAME,"wdir","_Working directory",0)
                 
                 
