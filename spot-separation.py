@@ -2,11 +2,11 @@
 # This is a Gimp plug-in for making spot color separation (suitable for screen printing)
 # starting from a photo in sRGB format.
 # It will reduce first the numbers of the colors accordingly to the custom palette prepared by the user.
-# The color palette has to have the indexed color 0 -> black  color 1 ->white 
-# and than all the colours you think 
+# The color palette has to have 
+# all the colours you think 
 # you need to make a good approximation of the original photo/artwork.
 #
-# spot-separation.py V0.2.3   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
+# spot-separation.py V0.2.4   Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
 
 # The program is distributed under the terms of the GNU General Public License.
 #
@@ -59,6 +59,8 @@ maxnumcol=14   #max number of final colours
 maxenlarge=5   #max pixel enlargement factor
 shrink=1       #nr of pixels for shrinking/growing underlayer
 
+dithermode=["None","Floyd-Steinberg","Floyd-Steinberg _reduced","Fixed"]
+
 def export_layers(img, drw, path, flatten=False,nname=""):
     """Exports layers into separate monochrome tif files identified by colour name"""
     dupe = img.duplicate()
@@ -103,8 +105,8 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
     palette,ext=os.path.splitext(palette)
     palette=pdb.gimp_palette_new(palette)
     if debug:print"Created new palette:%s" % palette
-    pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
-    pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
+    #pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
+    #pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
     timg.flatten() # flatten the image so you can easily pick up the colours from image
     pdb.gimp_message("New %s empty palette created. You have to fill it manually with the color picker tool !"% palette)
     #pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
@@ -219,6 +221,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
 	#making room for palette and marks  
     
     pdb.gimp_context_set_background(pdb.gimp_palette_entry_get_color(palette,2)) # background is the first color in the palette
+    
     pdb.gimp_image_resize(timg,width,height+130,0,0)
     
     pdb.gimp_layer_resize(nwdrawable,width,height+130,0,0)
@@ -240,8 +243,8 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         
             
         pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)		
+        pdb.gimp_image_convert_rgb(timg) #convert back to rgb so black and white colours has not to be present on custom palette!!
         
-        #pdb.gimp_context_set_brush("Circle (19)")
         pdb.gimp_context_set_brush("BigSquare")
         
         #draw some squares coloured in palette colours
@@ -265,7 +268,10 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             
                 
         pdb.gimp_context_set_foreground(pdb.gimp_palette_entry_get_color(palette,0)) # set black foreground mo make selection black
+        
         pdb.gimp_context_set_background(pdb.gimp_palette_entry_get_color(palette,1))# set white background 
+        
+        
         for idxcol in range(0,nrcol):		
             
             fraction=idxcol*(1.0/nrcol)
@@ -291,6 +297,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 pdb.gimp_edit_copy(nwdrawable)    #copy&paste way 1/2
                 floating=pdb.gimp_edit_paste(nwdrawable,0)       #2/2      
                 if multiple==True:
+                    pdb.gimp_context_set_foreground(pdb.gimp_palette_entry_get_color("Default",12))                 
                     pdb.gimp_edit_fill(floating,0)  #fill the current selection with black 
                 pdb.gimp_layer_resize_to_image_size(floating) # resize curent layer to the image size
                 #floating=pdb.gimp_selection_float(nwdrawable,0,0)       #alternative way 1/1    
@@ -328,7 +335,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             #delete old layer when finished
             timg.remove_layer(timg.layers[nrcol])
             #back to rgb for histogram to work
-            pdb.gimp_image_convert_rgb(timg)
+            ##pdb.gimp_image_convert_rgb(timg)
             if delback:background_deletion(timg)
             
             #make underlayer new position
@@ -336,7 +343,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
             
             #for each layer draw crosshair
             if marks==True:
-                color=pdb.gimp_palette_entry_get_color(palette,0)	
+                #color=pdb.gimp_palette_entry_get_color(palette,0)	
     		
                 pdb.gimp_context_set_foreground(color)	
                 if enlargement>1 :
@@ -344,7 +351,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 else:
                     pdb.gimp_context_set_brush("CrossHair")    
                     
-                #pdb.gimp_context_set_brush(cross)
+                
                 xpos=50
                 nrlayers=0
                 for curentlayer in timg.layers:
@@ -358,12 +365,12 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 
                  
                     #draw also some information
-                
+                pdb.gimp_context_set_foreground(pdb.gimp_palette_entry_get_color("Default",12)) 
                 for n in range(nrlayers):
                     if debug:print"Info", n
-                    info=timg.name+" "+timg.layers[n].name+" dot X"+str(enlargement)+" " +str(pdb.gimp_image_get_resolution(timg))+" ppi" 
+                    info=timg.name+" "+timg.layers[n].name+" dot X"+str(enlargement)+" " +str(pdb.gimp_image_get_resolution(timg))+" ppi "+str(dithermode[dither]) 
                     
-                    fl=pdb.gimp_text_fontname(timg,timg.layers[n],xpos+100,ypos+50,info,-1,False,20,0,"Sans") 
+                    fl=pdb.gimp_text_fontname(timg,timg.layers[n],xpos-10,ypos+50,info,-1,False,20,0,"Sans") 
                                    
                     pdb.gimp_floating_sel_to_layer(fl)
                     

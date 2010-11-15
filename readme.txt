@@ -1,4 +1,4 @@
-Gimp Spot Colour Separation  v 0.2.3  Copyright Robby Cerantola 2010-2011
+Gimp Spot Colour Separation  v 0.2.4  Copyright Robby Cerantola 2010-2011
 
 The program is distributed under the terms of the GNU General Public License.
 
@@ -16,7 +16,10 @@ Start Gimp, and when you will load an image, in the menu bar will appear a new i
 How to use:
 
 The very first step is to flatten the image to get rid off every existing layer, selections and channels.
-Then you have to create a custom palette by selecting every colour you need in your final print plus the black and white colours. The maximum number of colours is 14 (because there are not automatic printing machines with more than 14 colours in my knowledge)
+Then you have to create a custom palette by selecting every colour you need in your final print. 
+Previous versions needed also black and white colours to be present in custom palette, indifferently if the colours were present in the image or not, NOW IT IS NOT MORE NECESSARY !! This prevents the black and white colours to be used erroneously by the color spot separation routine when they are not present in the original image.
+
+The maximum number of colours is 14 (because there are not automatic printing machines with more than 14 colours in my knowledge)
 There is an option under the Spot menu <Prepare palette> that makes some work for you. At the moment it is in a very early stage, it makes only a palette named the same as the image with the black and white colours picked: you still need to put the rest of the colours by yourself in the new created palette. If you don't know how, you need to read carefully the Gimp manual first and then come back.
 You can now run the main routine by selecting from Spot menu the <Spot separation> item. A Python-FY gui will appear you need to select the Colour Palette : it has to be the palette you prepared before.
 The software will than reduce the number of colours to those in your custom palette, creating a separate layer for each colour.
@@ -88,7 +91,7 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABI
 
 Feeds back are welcome, send an e-mail to robbycerantola at gmail dot com
 
-06/11/2010
+15/11/2010
 
 
 
