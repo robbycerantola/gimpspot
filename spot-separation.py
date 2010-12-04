@@ -65,14 +65,19 @@ dithermode=["None","Floyd-Steinberg","Floyd-Steinberg _reduced","Fixed"]
 def export_layers_grays(img, drw, path,nname=""):
     """Exports layers into separate grayscale eps files identified by colour name"""
     dupe = img.duplicate()
+    
     for layer in dupe.layers:
+        pdb.gimp_layer_resize_to_image_size(layer)
         layer.visible = 0
     for layer in dupe.layers:
         layer.visible = 1
-        name = nname+"_"+layer.name + "-grs.eps"
+        name = nname+"_"+layer.name + "-grs.tif"
         fullpath = os.path.join(path, name);
         tmp = dupe.duplicate()
+        
         pdb.gimp_image_convert_grayscale(tmp)
+        #autoequalizza
+        pdb.gimp_equalize(tmp.layers[0],False)
         pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
         dupe.remove_layer(layer)
 
@@ -614,7 +619,23 @@ register(
         [],
         rastering_separation)
 
-           
+register(
+        "Export-grayscale",
+        "Export layers into separated grayscale files",
+        "",
+        "Robby Cerantola",
+        "Robby Cerantola",
+        "2010-2011",
+        "<Image>/Separation/_xport...",
+        "RGB*, GRAY*",
+        [
+                (PF_DIRNAME,"wdir","_Working directory",0)
+                
+                
+                
+        ],
+        [],
+        export_layers_grays)
         
 
 main()
