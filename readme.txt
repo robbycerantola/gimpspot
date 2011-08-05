@@ -18,6 +18,7 @@ How to use:
 The very first step is to flatten the image to get rid off every existing layer, selections and channels.
 Then you have to create a custom palette by selecting every colour you need in your final print. 
 Previous versions needed also black and white colours to be present in custom palette, indifferently if the colours were present in the image or not, NOW IT IS NOT MORE NECESSARY !! This prevents the black and white colours to be used erroneously by the color spot separation routine when they are not present in the original image.
+(!!!BUG: unfortunately if you do not select black and white colours in the first and second position in the palette, the multiple EPS file created with the multiple files option are completely black !!, the separated-psd file is not affected . )
 
 The maximum number of colours is 14 (because there are not automatic printing machines with more than 14 colours in my knowledge)
 There is an option under the Spot menu <Prepare palette> that makes some work for you. At the moment it is in a very early stage, it makes only a palette named the same as the image with the black and white colours picked: you still need to put the rest of the colours by yourself in the new created palette. If you don't know how, you need to read carefully the Gimp manual first and then come back.
@@ -48,7 +49,7 @@ There are also some options, here a brief description:
     
     Underlayer:                 (if you don't know what it is for , you are not a screen printer)
                 none             do not create any underlayer 
-                same dimensions  create an underlayer the same dimension of the sum of all the layers
+                same dimensions  create an underlayer with the same dimension of the sum of all the layers
                 bigger           create an underlayer 1 pixel around bigger than the sum of layers
                 smaller          same as above but 1 pixel around smaller
     
@@ -75,11 +76,11 @@ There are also some options, here a brief description:
     Working directory: 
          self explanatory.
 
-For the moment it does not exist a real preview option, but you can see what you are doing by running the plug-in twice: first setting option <Multiple files> to NO , so you will get a coloured multilayer separation that you can inspect (or print in color for reference) and than, if you are satisfy ed you can UNDO and make again the Spot-separation setting this time option <Multiple files> to YES. 
+For the moment it does not exist a real preview option, but you can see what you are doing by running the plug-in twice: first setting option <Multiple files> to NO , so you will get a coloured multilayer separation that you can inspect (or print in color for reference) and than, if you are satisfied you can UNDO and make again the Spot-separation setting this time option <Multiple files> to YES. 
 
 
 TODO
-    Undo
+
     Automate colours picking
     Automate previewing process
     Paginate the resulting layers to a single bigger page to be printed on large format inkjet film printers 
@@ -92,7 +93,7 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABI
 Feeds back are welcome, send an e-mail to robbycerantola at gmail dot com
 
 15/11/2010
-
+revised 05/08/2011
 
 
 
