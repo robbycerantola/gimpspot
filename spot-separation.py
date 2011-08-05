@@ -66,12 +66,17 @@ dithermode=["None","Floyd-Steinberg","Floyd-Steinberg _reduced","Fixed"]
 def export_layers_grays(img, drw, path,nname=""):
     """Exports layers into separate grayscale eps files identified by colour name"""
     dupe = img.duplicate()
-    
+    ext=""
+    if nname=="":
+        
+        nname,ext=os.path.splitext(pdb.gimp_image_get_name(img))
+    if debug :print"Filename", nname
     for layer in dupe.layers:
         pdb.gimp_layer_resize_to_image_size(layer)
         layer.visible = 0
     for layer in dupe.layers:
         layer.visible = 1
+        
         name = nname+"_"+layer.name + "-grs.tif"
         fullpath = os.path.join(path, name);
         tmp = dupe.duplicate()
@@ -79,8 +84,8 @@ def export_layers_grays(img, drw, path,nname=""):
         pdb.gimp_image_convert_grayscale(tmp)
         #autoequalizza
         pdb.gimp_equalize(tmp.layers[0],False)
-        pdb.gimp_invert(tmp.layers[0]) #inverti
-        tmp.flattent() #appiattisci
+        pdb.gimp_invert(tmp.layers[0]) #inverti 
+        tmp.flatten() #appiattisci 
         pdb.gimp_file_save(tmp, tmp.layers[0], fullpath, name)
         dupe.remove_layer(layer)
 
