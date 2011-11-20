@@ -54,6 +54,7 @@
 import math
 from gimpfu import *
 import os
+import os.path
 
 
 debug=1        #output some debug information on console
@@ -162,6 +163,7 @@ def palette_callback(img,drawable):
     return
 
 def background_deletion(timg):
+    
     if debug:print"Deleting background"
     gimp.progress_init("Deleting background...")
     gimp.progress_update(0.5)
@@ -169,7 +171,9 @@ def background_deletion(timg):
     oldpixelcount=0
     for curent_layer in timg.layers:
         timg.active_layer=curent_layer
-        
+        if curent_layer.name=="background" or current_layer.name=="fond" : #If a color in the palette is called 'background' then delete that one !!
+            biggerlayer=curent_layer
+            break
         #set layer pixel counter for current layer (color) needed for background deletion
         (a,b,c,pixelcount,e,f)=pdb.gimp_histogram(timg.active_layer,0,0,255) 
         if pixelcount>oldpixelcount:
@@ -260,7 +264,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     height = timg.height
     nrcol=pdb.gimp_palette_get_info(palette)
     pixelcount=[]
+    pdb.gimp_selection_none(timg) #clear all selections  DOES NOT WORK !! 
     nwdrawable=timg.flatten() # flatten all existing layers first !! (this solve also block bug)
+        
     if enlargement>maxenlarge :
         enlargement=maxenlarge
     if enlargement>1:    #makes a "bigger" pixel
@@ -355,7 +361,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 #floating=pdb.gimp_selection_float(nwdrawable,0,0)       #alternative way 1/1    
                 pdb.gimp_floating_sel_to_layer(floating)
             
-                #set layer name accordingly the palette colour name (or index)
+                #set layer name accordingly with the palette colour name (or index)
                 layernewname=pdb.gimp_palette_entry_get_name(palette,idxcol)
                 if layernewname =="Immagine" or layernewname=="Untitled" :
                     layernewname="Col #"+str(idxcol)
@@ -483,6 +489,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     	       
     	        #fullpath=os.path.join(os.getcwd(),filename)
     	        fullpath=os.path.join(wdir,filename)
+    	        if os.path.isfile(fullpath): #remove old file if already exists
+    	            os.remove(fullpath)
+    	            if debug:print"Warning: existing file has been overwrited!"
     	        if debug:print"Saving (layer mode)",fullpath            
     	        pdb.gimp_file_save(timg, timg.layers[0], fullpath, filename)
                 pdb.gimp_message("Done, file saved in "+fullpath)
