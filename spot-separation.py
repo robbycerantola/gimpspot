@@ -136,8 +136,8 @@ def spot_palette(timg,tdrawable,mode=0,option=False):
     palette,ext=os.path.splitext(palette)
     palette=pdb.gimp_palette_new(palette)
     if debug:print"Created new palette:%s" % palette
-    #pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
-    #pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
+    pdb.gimp_palette_add_entry(palette,"black",(0,0,0))
+    pdb.gimp_palette_add_entry(palette,"white",(255,255,255))
     timg.flatten() # flatten the image so you can easily pick up the colours from image
     pdb.gimp_message("New %s empty palette created. You have to fill it manually with the color picker tool !"% palette)
     #pdb.gimp_palettes_popup("palette_callback","Choose_next_colours",palette)
@@ -171,7 +171,7 @@ def background_deletion(timg):
     oldpixelcount=0
     for curent_layer in timg.layers:
         timg.active_layer=curent_layer
-        if curent_layer.name=="background" or current_layer.name=="fond" : #If a color in the palette is called 'background' then delete that one !!
+        if curent_layer.name=="background" or curent_layer.name=="fond" : #If a color in the palette is called 'background' then delete that one !!
             biggerlayer=curent_layer
             break
         #set layer pixel counter for current layer (color) needed for background deletion

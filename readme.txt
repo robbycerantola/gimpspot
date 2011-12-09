@@ -79,12 +79,21 @@ There are also some options, here a brief description:
 For the moment it does not exist a real preview option, but you can see what you are doing by running the plug-in twice: first setting option <Multiple files> to NO , so you will get a coloured multilayer separation that you can inspect (or print in color for reference) and than, if you are satisfied you can UNDO and make again the Spot-separation setting this time option <Multiple files> to YES. 
 
 
+Added to revision 22:
+        If you name a color layer as "background" , this layer will be picked up for automatic background deletion. 
+
+
+
+
 TODO
 
     Automate colours picking
     Automate previewing process
     Paginate the resulting layers to a single bigger page to be printed on large format inkjet film printers 
     Mirror the layers for transfer printing
+
+
+
 
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -94,7 +103,7 @@ Feeds back are welcome, send an e-mail to robbycerantola at gmail dot com
 
 15/11/2010
 revised 05/08/2011
-
+revised 22/11/2011
 
 
 
