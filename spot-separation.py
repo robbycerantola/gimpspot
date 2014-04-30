@@ -51,6 +51,8 @@
 #NEW feature: 27-11-2010 Color separation by rastering
 #corrected BUG for x_port : the files have to be inverted and flattened
 
+#Bigger numbered squares, more distance between them and the artwork, 29-04-2014
+
 import math
 from gimpfu import *
 import os
@@ -280,9 +282,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
     
     pdb.gimp_context_set_background(pdb.gimp_palette_entry_get_color(palette,2)) # background is the first color in the palette
     
-    pdb.gimp_image_resize(timg,width,height+130,0,0)
+    pdb.gimp_image_resize(timg,width,height+180,0,0)
     
-    pdb.gimp_layer_resize(nwdrawable,width,height+130,0,0)
+    pdb.gimp_layer_resize(nwdrawable,width,height+180,0,0)
     
     original_active = timg.active_layer
         
@@ -304,15 +306,16 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
         pdb.gimp_image_convert_rgb(timg) #convert back to rgb so black and white colours has not to be present on custom palette!!
         
         pdb.gimp_context_set_brush("BigSquare")
+        pdb.gimp_brush_set_radius("BigSquare",50)  #make bigger squares      
         
         #draw some squares coloured in palette colours
         if marks==True:
             
             xpos=100
-            ypos=height+50
+            ypos=height+80
             delta=int((width-200)/nrcol)
-            if delta > 100:
-                delta=100
+            if delta > 200:
+                delta=200
             for idxcol in range(1,nrcol):
                 xpos=xpos+delta
                 color=pdb.gimp_palette_entry_get_color(palette,idxcol)	
@@ -320,7 +323,13 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 pdb.gimp_context_set_foreground(color)	
             
                 pdb.gimp_paintbrush(nwdrawable,0,2,[xpos,ypos,xpos,ypos],0,0)
-        
+                #write number on top of square
+                info=""+str(idxcol)
+                color=pdb.gimp_palette_entry_get_color(palette,0)
+                pdb.gimp_context_set_foreground(color)    
+                fln=pdb.gimp_text_fontname(timg,timg.layers[idxcol-1],xpos+45,ypos,info,-1,False,50,0,"Sans") 
+                pdb.gimp_floating_sel_to_layer(fln)
+
         ##pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)	                
             
             
