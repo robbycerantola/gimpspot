@@ -232,10 +232,10 @@ def create_underlayer(img,underlayer,value=1,enlargement=1,marks=0):
     
     gimp.progress_update(1)
 
-def rastering_separation(timg,tdrawable,palette="Default",multiple=False,threshold=26,wdir=os.getcwd()):
+def rastering_separation(timg,tdrawable,palette="Default",multiple=False,threshold=26,undo=False,wdir=os.getcwd()):
     """New kind of color separation using custom palette and rastering. 
     It saves multiple gray files to be elaborate by an external RIP software. EXPERIMENTAL!!"""
-    pdb.gimp_image_undo_group_start(timg)
+    if undo:pdb.gimp_image_undo_group_start(timg)
     nrcol=pdb.gimp_palette_get_info(palette)
     nwdrawable=timg.flatten()
     for idxcol in range(0,nrcol-1):
@@ -251,16 +251,16 @@ def rastering_separation(timg,tdrawable,palette="Default",multiple=False,thresho
             layernewname="Col #"+str(idxcol)
         floating.name=layernewname      
          
-    pdb.gimp_image_undo_group_end(timg)
+    if undo:pdb.gimp_image_undo_group_end(timg)
                   
     
-def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0,wdir=os.getcwd() ):
+def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0,undo=False,wdir=os.getcwd() ):
     """ spot color separation """
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
         return 
     
-    pdb.gimp_image_undo_group_start(timg)
+    if undo:pdb.gimp_image_undo_group_start(timg)
     
     width = timg.width          #get all image width / height
     height = timg.height
@@ -325,9 +325,9 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 pdb.gimp_paintbrush(nwdrawable,0,2,[xpos,ypos,xpos,ypos],0,0)
                 #write number on top of square
                 info=""+str(idxcol)
-                color=pdb.gimp_palette_entry_get_color(palette,0)
+                color=pdb.gimp_palette_entry_get_color(palette,1)
                 pdb.gimp_context_set_foreground(color)    
-                fln=pdb.gimp_text_fontname(timg,timg.layers[idxcol-1],xpos+45,ypos,info,-1,False,50,0,"Sans") 
+                fln=pdb.gimp_text_fontname(timg,timg.layers[idxcol-1],xpos,ypos,info,-1,False,50,0,"Sans") 
                 pdb.gimp_floating_sel_to_layer(fln)
 
         ##pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)	                
@@ -511,7 +511,7 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
 		#error : too many colors to do spot separation with
     
     
-    pdb.gimp_image_undo_group_end(timg)
+    if undo:pdb.gimp_image_undo_group_end(timg)
     
 register(
         "Prepare-palette",
@@ -562,7 +562,7 @@ register(
                 (PF_BOOL,   "marks", "_Marks & bars:", False),
                 (PF_BOOL,   "multiple", "Multiple _files:", False),
                 (PF_BOOL,   "delback","Delete bac_kground color:",False),
-                
+                (PF_BOOL,   "undo","Undo(LOT OF MEMORY!):",False),
                 (PF_RADIO,   "underlayer", "Automatic underlayer:",0,
                 (("Non_e",0),
                 ("Same _dimensions",1),
