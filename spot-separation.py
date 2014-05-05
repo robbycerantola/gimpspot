@@ -6,7 +6,7 @@
 # all the colours you think 
 # you need to make a good approximation of the original photo/artwork.
 #
-# spot-separation.py V0.3.1 Copyright Robby Cerantola  2010-2011  robbycerantola@gmail.com
+# spot-separation.py V0.4.1 Copyright Robby Cerantola  2010-2014  robbycerantola@gmail.com
 
 # The program is distributed under the terms of the GNU General Public License.
 #
@@ -51,7 +51,8 @@
 #NEW feature: 27-11-2010 Color separation by rastering
 #corrected BUG for x_port : the files have to be inverted and flattened
 
-#Bigger numbered squares, more distance between them and the artwork, 29-04-2014
+#Bigger numbered squares, more distance between them and the artwork,numbers  29-04-2014
+#Disabled UNDO for default , added option in menu
 
 import math
 from gimpfu import *
@@ -63,6 +64,7 @@ debug=1        #output some debug information on console
 maxnumcol=14   #max number of final colours
 maxenlarge=5   #max pixel enlargement factor
 shrink=1       #nr of pixels for shrinking/growing underlayer
+#undo=False
 
 dithermode=["None","Floyd-Steinberg","Floyd-Steinberg _reduced","Fixed"]
 
@@ -95,7 +97,7 @@ def export_layers_grays(img, drw, path,nname=""):
 
 
 def export_layers(img, drw, path, flatten=False,nname=""):
-    """Exports layers into separate monochrome tif files identified by colour name"""
+    """Exports layers into separate monochrome eps files identified by colour name"""
     dupe = img.duplicate()
     for layer in dupe.layers:
         layer.visible = 0
@@ -235,7 +237,11 @@ def create_underlayer(img,underlayer,value=1,enlargement=1,marks=0):
 def rastering_separation(timg,tdrawable,palette="Default",multiple=False,threshold=26,undo=False,wdir=os.getcwd()):
     """New kind of color separation using custom palette and rastering. 
     It saves multiple gray files to be elaborate by an external RIP software. EXPERIMENTAL!!"""
-    if undo:pdb.gimp_image_undo_group_start(timg)
+    if undo:
+        pdb.gimp_image_undo_group_start(timg)
+    else:
+        pdb.gimp_image_undo_disable(timg)
+        
     nrcol=pdb.gimp_palette_get_info(palette)
     nwdrawable=timg.flatten()
     for idxcol in range(0,nrcol-1):
@@ -251,16 +257,24 @@ def rastering_separation(timg,tdrawable,palette="Default",multiple=False,thresho
             layernewname="Col #"+str(idxcol)
         floating.name=layernewname      
          
-    if undo:pdb.gimp_image_undo_group_end(timg)
+    if undo:
+        pdb.gimp_image_undo_group_end(timg)
+    else:
+        pdb.gimp_image_undo_enable(timg)
                   
     
-def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,underlayer=0,enlargement=1,chla=0,undo=False,wdir=os.getcwd() ):
+def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=False,marks=False, multiple=False,delback=False,undo=False,underlayer=0,enlargement=1,chla=0,wdir=os.getcwd() ):
     """ spot color separation """
+    if debug:print "enlargement=",enlargement    
     
     if pdb.gimp_drawable_is_indexed(tdrawable)== True:  #it has to be a RGB image!!
         return 
     
-    if undo:pdb.gimp_image_undo_group_start(timg)
+    
+    if undo:
+        pdb.gimp_image_undo_group_start(timg)
+    else:
+        pdb.gimp_image_undo_disable(timg)
     
     width = timg.width          #get all image width / height
     height = timg.height
@@ -325,10 +339,10 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
                 pdb.gimp_paintbrush(nwdrawable,0,2,[xpos,ypos,xpos,ypos],0,0)
                 #write number on top of square
                 info=""+str(idxcol)
-                color=pdb.gimp_palette_entry_get_color(palette,1)
-                pdb.gimp_context_set_foreground(color)    
-                fln=pdb.gimp_text_fontname(timg,timg.layers[idxcol-1],xpos,ypos,info,-1,False,50,0,"Sans") 
-                pdb.gimp_floating_sel_to_layer(fln)
+                #color=pdb.gimp_palette_entry_get_color(palette,0)
+                #pdb.gimp_context_set_foreground(color)    
+                fln=pdb.gimp_text_fontname(timg,nwdrawable,xpos+50,ypos,info,-1,False,50,0,"Sans") 
+                pdb.gimp_floating_sel_anchor(fln)
 
         ##pdb.gimp_convert_indexed(timg,dither,4,nrcol,0,0,palette)	                
             
@@ -511,7 +525,10 @@ def spot_separation(timg, tdrawable, palette="Default", dither=2,transparency=Fa
 		#error : too many colors to do spot separation with
     
     
-    if undo:pdb.gimp_image_undo_group_end(timg)
+    if undo:
+        pdb.gimp_image_undo_group_end(timg)
+    else:
+        pdb.gimp_image_undo_enable(timg)
     
 register(
         "Prepare-palette",
